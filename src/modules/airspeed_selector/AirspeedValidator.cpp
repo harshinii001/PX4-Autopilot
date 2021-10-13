@@ -58,7 +58,6 @@ AirspeedValidator::update_airspeed_validator(const airspeed_validator_update_dat
 	update_in_fixed_wing_flight(input_data.in_fixed_wing_flight);
 	check_airspeed_data_stuck(input_data.timestamp);
 	check_airspeed_innovation(input_data.timestamp, input_data.vel_test_ratio, input_data.mag_test_ratio);
-	check_load_factor(input_data.accel_z);
 	update_airspeed_valid_status(input_data.timestamp);
 }
 
@@ -264,48 +263,22 @@ AirspeedValidator::check_airspeed_innovation(uint64_t time_now, float estimator_
 	_time_last_aspd_innov_check = time_now;
 }
 
-
-void
-AirspeedValidator::check_load_factor(float accel_z)
-{
-	// Check if the airspeed reading is lower than physically possible given the load factor
-
-	if (_in_fixed_wing_flight) {
-
-		float max_lift_ratio = fmaxf(_CAS, 0.7f) / fmaxf(_airspeed_stall, 1.0f);
-		max_lift_ratio *= max_lift_ratio;
-		_load_factor_ratio = 0.95f * _load_factor_ratio + 0.05f * (fabsf(accel_z) / 9.81f) / max_lift_ratio;
-		_load_factor_ratio = math::constrain(_load_factor_ratio, 0.25f, 2.0f);
-		_load_factor_check_failed = (_load_factor_ratio > 1.1f);
-
-	} else {
-		_load_factor_ratio = 0.5f; // reset if not in fixed-wing flight (and not in takeoff condition)
-	}
-}
-
-
 void
 AirspeedValidator::update_airspeed_valid_status(const uint64_t timestamp)
 {
-	if (_data_stuck_test_failed || _innovations_check_failed || _load_factor_check_failed) {
-		// at least one check (data stuck, innovation or load factor) failed, so record timestamp
+	if (_data_stuck_test_failed || _innovations_check_failed) {
+		// at least one check (data stuck or innovation) failed, so record timestamp
 		_time_checks_failed = timestamp;
 
-	} else if (! _data_stuck_test_failed && !_innovations_check_failed && !_load_factor_check_failed) {
-		// all checks(data stuck, innovation and load factor) must pass to declare airspeed good
+	} else if (! _data_stuck_test_failed && !_innovations_check_failed) {
+		// all checks (data stuck and innovation) must pass to declare airspeed good
 		_time_checks_passed = timestamp;
 	}
 
 	if (_airspeed_valid) {
-		// A simultaneous load factor and innovaton check fail makes it more likely that a large
-		// airspeed measurement fault has developed, so a fault should be declared immediately
-		const bool both_checks_failed = (_innovations_check_failed && _load_factor_check_failed);
+		const bool check_fail_timeout = (timestamp - _time_checks_passed) > _checks_fail_delay * 1_s;
 
-		// Because the innovation and load factor checks are subject to short duration false positives
-		// a timeout period is applied.
-		const bool single_check_fail_timeout = (timestamp - _time_checks_passed) > _checks_fail_delay * 1_s;
-
-		if (both_checks_failed || single_check_fail_timeout || _data_stuck_test_failed) {
+		if (check_fail_timeout || _data_stuck_test_failed) {
 
 			_airspeed_valid = false;
 		}

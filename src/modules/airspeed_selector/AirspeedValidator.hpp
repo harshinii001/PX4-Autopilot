@@ -62,7 +62,6 @@ struct airspeed_validator_update_data {
 	float att_q[4];
 	float air_pressure_pa;
 	float air_temperature_celsius;
-	float accel_z;
 	float vel_test_ratio;
 	float mag_test_ratio;
 	bool in_fixed_wing_flight;
@@ -109,9 +108,6 @@ public:
 	void set_tas_innov_integ_threshold(float tas_innov_integ_threshold) { _tas_innov_integ_threshold = tas_innov_integ_threshold; }
 	void set_checks_fail_delay(float checks_fail_delay) { _checks_fail_delay = checks_fail_delay; }
 	void set_checks_clear_delay(float checks_clear_delay) { _checks_clear_delay = checks_clear_delay; }
-
-	void set_airspeed_stall(float airspeed_stall) { _airspeed_stall = airspeed_stall; }
-
 	void set_tas_scale_apply(int tas_scale_apply) { _tas_scale_apply = tas_scale_apply; }
 	void set_CAS_scale_estimated(float scale) { _CAS_scale_estimated = scale; }
 	void set_scale_init(float scale) { _wind_estimator.set_scale_init(scale); }
@@ -125,7 +121,7 @@ private:
 	static constexpr int SCALE_CHECK_SAMPLES = 12; ///< take samples from 12 segments (every 360/12=30°)
 
 	// general states
-	bool _in_fixed_wing_flight{false}; ///< variable to bypass innovation and load factor checks
+	bool _in_fixed_wing_flight{false}; ///< variable to bypass innovation checks
 	float _IAS{0.0f}; ///< indicated airsped in m/s
 	float _CAS{0.0f}; ///< calibrated airspeed in m/s
 	float _TAS{0.0f}; ///< true airspeed in m/s
@@ -148,11 +144,6 @@ private:
 	float		_apsd_innov_integ_state{0.0f};	///< integral of excess normalised airspeed innovation (sec)
 	static constexpr uint64_t TAS_INNOV_FAIL_DELAY{1_s};	///< time required for innovation levels to pass or fail (usec)
 	uint64_t	_time_wind_estimator_initialized{0};		///< time last time wind estimator was initialized (uSec)
-
-	// states of load factor check
-	bool _load_factor_check_failed{false}; ///< load_factor check has detected failure
-	float _airspeed_stall{8.0f}; ///< stall speed of aircraft used for load factor check
-	float	_load_factor_ratio{0.5f};	///< ratio of maximum load factor predicted by stall speed to measured load factor
 
 	// states of airspeed valid declaration
 	bool _airspeed_valid{true}; ///< airspeed valid (pitot or groundspeed-windspeed)
@@ -179,7 +170,6 @@ private:
 	void check_airspeed_data_stuck(uint64_t timestamp);
 	void check_airspeed_innovation(uint64_t timestamp, float estimator_status_vel_test_ratio,
 				       float estimator_status_mag_test_ratio);
-	void check_load_factor(float accel_z);
 	void update_airspeed_valid_status(const uint64_t timestamp);
 	void reset();
 	void reset_CAS_scale_check();

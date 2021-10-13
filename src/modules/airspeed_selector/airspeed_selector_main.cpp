@@ -56,7 +56,6 @@
 #include <uORB/topics/position_setpoint.h>
 #include <uORB/Publication.hpp>
 #include <uORB/PublicationMulti.hpp>
-#include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_air_data.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_land_detected.h>
@@ -113,7 +112,6 @@ private:
 
 	uORB::Subscription _estimator_selector_status_sub{ORB_ID(estimator_selector_status)};
 	uORB::Subscription _estimator_status_sub{ORB_ID(estimator_status)};
-	uORB::Subscription _vehicle_acceleration_sub{ORB_ID(vehicle_acceleration)};
 	uORB::Subscription _vehicle_air_data_sub{ORB_ID(vehicle_air_data)};
 	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
@@ -125,7 +123,6 @@ private:
 
 
 	estimator_status_s _estimator_status {};
-	vehicle_acceleration_s _accel {};
 	vehicle_air_data_s _vehicle_air_data {};
 	vehicle_attitude_s _vehicle_attitude {};
 	vehicle_land_detected_s _vehicle_land_detected {};
@@ -343,7 +340,6 @@ AirspeedModule::Run()
 		input_data.att_q[2] = _vehicle_attitude.q[2];
 		input_data.att_q[3] = _vehicle_attitude.q[3];
 		input_data.air_pressure_pa = _vehicle_air_data.baro_pressure_pa;
-		input_data.accel_z = _accel.xyz[2];
 		input_data.vel_test_ratio = _estimator_status.vel_test_ratio;
 		input_data.mag_test_ratio = _estimator_status.mag_test_ratio;
 
@@ -459,7 +455,6 @@ void AirspeedModule::update_params()
 		_airspeed_validator[i].set_tas_innov_integ_threshold(_tas_innov_integ_threshold.get());
 		_airspeed_validator[i].set_checks_fail_delay(_checks_fail_delay.get());
 		_airspeed_validator[i].set_checks_clear_delay(_checks_clear_delay.get());
-		_airspeed_validator[i].set_airspeed_stall(_param_fw_airspd_stall.get());
 		_airspeed_validator[i].set_disable_tas_scale_estimate(_param_aspd_scale_apply.get() == 0);
 	}
 }
@@ -478,7 +473,6 @@ void AirspeedModule::poll_topics()
 	}
 
 	_estimator_status_sub.update(&_estimator_status);
-	_vehicle_acceleration_sub.update(&_accel);
 	_vehicle_air_data_sub.update(&_vehicle_air_data);
 	_vehicle_attitude_sub.update(&_vehicle_attitude);
 	_vehicle_land_detected_sub.update(&_vehicle_land_detected);
