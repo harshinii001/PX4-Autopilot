@@ -49,38 +49,40 @@ public:
 
 	unsigned get_size() override
 	{
-		return _orbit_status_sub.advertised() ? MAVLINK_MSG_ID_ORBIT_EXECUTION_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
+		return _orbit_status_subs.advertised() ? MAVLINK_MSG_ID_ORBIT_EXECUTION_STATUS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES : 0;
 	}
 
 private:
 	explicit MavlinkStreamOrbitStatus(Mavlink *mavlink) : MavlinkStream(mavlink) {}
 
-	uORB::SubscriptionMultiArray<orbit_status_s> _orbit_status_sub{ORB_ID::orbit_status};
+	uORB::SubscriptionMultiArray<orbit_status_s> _orbit_status_subs{ORB_ID::orbit_status};
 
 	bool send() override
 	{
-		orbit_status_s _orbit_status;
+		orbit_status_s orbit_status;
+		bool updated = false;
 
-		for (auto &orbit_sub : _orbit_status_sub) {
+		for (auto &orbit_sub : _orbit_status_subs) {
 
-			if (orbit_sub.update(&_orbit_status)) {
-				mavlink_orbit_execution_status_t _msg_orbit_execution_status{};
+			if (orbit_sub.update(&orbit_status)) {
+				updated = true;
+				mavlink_orbit_execution_status_t msg_orbit_execution_status{};
 
-				_msg_orbit_execution_status.time_usec = _orbit_status.timestamp;
-				_msg_orbit_execution_status.radius = _orbit_status.radius;
-				_msg_orbit_execution_status.frame = _orbit_status.frame;
-				_msg_orbit_execution_status.x = _orbit_status.x * 1e7;
-				_msg_orbit_execution_status.y = _orbit_status.y * 1e7;
-				_msg_orbit_execution_status.z = _orbit_status.z;
+				msg_orbit_execution_status.time_usec = orbit_status.timestamp;
+				msg_orbit_execution_status.radius = orbit_status.radius;
+				msg_orbit_execution_status.frame = orbit_status.frame;
+				msg_orbit_execution_status.x = orbit_status.x * 1e7;
+				msg_orbit_execution_status.y = orbit_status.y * 1e7;
+				msg_orbit_execution_status.z = orbit_status.z;
 
-				mavlink_msg_orbit_execution_status_send_struct(_mavlink->get_channel(), &_msg_orbit_execution_status);
+				mavlink_msg_orbit_execution_status_send_struct(_mavlink->get_channel(), &msg_orbit_execution_status);
 
 				// only one subscription should ever be active at any time, so we can exit here
 				break;
 			}
 		}
 
-		return true;
+		return updated;
 	}
 };
 
